@@ -1,2 +1,3 @@
 # lumpedParameterVehicle
 lumped_parameter_model
+车辆的简单集总参数模型
