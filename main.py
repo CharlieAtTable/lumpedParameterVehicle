@@ -2,8 +2,14 @@ import numpy as np
 
 
 class Tire:
+    """only force properties are defined here"""
+
     lonCoef = 0.0
     cornStiff = 0.0
+
+    def __init__(self, longitudinalCoef, corneringStiff) -> None:
+        self.cornStiff = corneringStiff
+        self.lonCoef = longitudinalCoef
 
 
 class Axle:
@@ -13,8 +19,8 @@ class Axle:
     """mass of half axle"""
     springK = 0.0
     damperC = 0.0
-    leftTire = Tire()
-    rightTire = Tire()
+    leftTire = Tire(1000, 1000)
+    rightTire = Tire(1000, 1000)
     position = [0.0, 0.0, 0.0]
     """axle centre location in sprung frame"""
     base = 0.0
@@ -29,7 +35,8 @@ class Vehicle:
     """sprung mass"""
     Ixx = 2286.8
     Iyy = 35408.7
-    Izz = 34823.2
+    Izz = 34823.2 + 335 + 285 + 1.3**2 * 285 + 3.80**2 * 367.5
+    """whole vehicle"""
     Ixy = 0.0
     Ixz = 1626.0
     Iyz = 0.0
@@ -60,9 +67,6 @@ def main():
     for step in stepSeries:
         u[step] = timeSeries[step]
 
-    print(u)
-    print(timeSeries.shape)
-    print(stepSeries.shape)
     return 0
 
 
