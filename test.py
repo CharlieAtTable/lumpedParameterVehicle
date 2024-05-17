@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+modifiedEuler = False
+
 g = 9.8
 mb = 4455.0 + 200 * 8
 mw = 325.5
@@ -18,11 +20,6 @@ h = 0.5  # in doubt
 
 Fzf = mw * g + mb * g * b / 2 / base
 Fzr = mw * g + mb * g * a / 2 / base
-
-# kf = -1.5
-# kr = -1.5
-# muf = 0.7188
-# mur = 0.7188
 
 B0 = 2.37272
 B1 = -9.46
@@ -50,6 +47,9 @@ A10 = 0.003709
 A11 = 19.1656
 A12 = 1.21356
 A13 = 6.26206
+# A11 = 0.0
+# A12 = 0.0
+# A13 = 0.0
 
 
 def pacFx(Fz, kappa):
@@ -69,7 +69,7 @@ def pacFx(Fz, kappa):
     return D * np.sin(C * np.arctan(B * X1 - E * (B * X1 - np.arctan(B * X1)))) + Sv
 
 
-def pacFy(Fz, alpha, gamma=0):
+def pacFy(Fz, alpha, gamma=0.0):
     """
     Fz-kN
 
@@ -86,6 +86,20 @@ def pacFy(Fz, alpha, gamma=0):
     return -D * np.sin(C * np.arctan(B * X1 - E * (B * X1 - np.arctan(B * X1)))) + Sv
 
 
+def pacFxyCombine(kappa, alpha, Fx0, Fy0, eps=1e-3):
+    """
+    kappa-[-1, 1]
+
+    alpha-rad
+    """
+    delt_x = abs(kappa / (1 + kappa + eps))
+    delt_y = abs(np.tan(alpha) / (1 + kappa + eps))
+    delt = (delt_x**2 + delt_y**2) ** 0.5 + eps
+    Fx = delt_x / delt * Fx0
+    Fy = delt_y / delt * Fy0
+    return Fx, Fy
+
+
 def kappa(R, q, u, eps=1e-3):
     return np.clip((R * q - u) / (max(abs(R * q), abs(u)) + eps), -1, 1)
 
@@ -95,7 +109,7 @@ def alpha(u, v):
 
 
 def init(u, v, r, qfl, qfr, qrl, qrr):
-    u[0] = 10.0
+    u[0] = 0.0
     v[0] = 0.0
     r[0] = 0.0
     qfl[0] = u[0] / Rf
@@ -105,7 +119,7 @@ def init(u, v, r, qfl, qfr, qrl, qrr):
 
 
 endTime = 10.0
-timeStep = 0.001
+timeStep = 0.01
 timeSeries = np.arange(0, timeStep + endTime, timeStep, dtype=float)
 stepSeries = np.arange(0, timeSeries.size - 1, dtype=int)
 
@@ -123,10 +137,10 @@ Tfr = 0.0 * np.ones(timeSeries.shape)
 Trl = 0.0 * np.ones(timeSeries.shape)
 Trr = 0.0 * np.ones(timeSeries.shape)
 
-delta[int(1 / timeStep) : int(2 / timeStep)] = np.linspace(
-    0.0, 0.2, num=int(1 / timeStep)
-)
-delta[int(2 / timeStep) :] = 0.2
+# delta[int(1 / timeStep) : int(2 / timeStep)] = np.linspace(
+#     0.0, 0.2, num=int(1 / timeStep)
+# )
+# delta[int(2 / timeStep) :] = 0.2
 
 init(u, v, r, qfl, qfr, qrl, qrr)
 
@@ -140,6 +154,7 @@ dqrr = 0.0
 
 for step in stepSeries:
 
+    # predictor
     ufl = (u[step] - d / 2 * r[step]) * np.cos(delta[step]) + (
         v[step] + a * r[step]
     ) * np.sin(delta[step])
@@ -168,25 +183,29 @@ for step in stepSeries:
     kapparl = kappa(Rr, qrl[step], url)
     kapparr = kappa(Rr, qrr[step], urr)
 
-    Fzfl = (
+    Fzfl = max(
         Fzf
         - mb * h * (du - v[step] * r[step]) / 2 / base
-        - mb * h * (dv + u[step] * r[step]) * b / d / base
+        - mb * h * (dv + u[step] * r[step]) * b / d / base,
+        0,
     )
-    Fzfr = (
+    Fzfr = max(
         Fzf
         - mb * h * (du - v[step] * r[step]) / 2 / base
-        + mb * h * (dv + u[step] * r[step]) * b / d / base
+        + mb * h * (dv + u[step] * r[step]) * b / d / base,
+        0,
     )
-    Fzrl = (
+    Fzrl = max(
         Fzr
         + mb * h * (du - v[step] * r[step]) / 2 / base
-        - mb * h * (dv + u[step] * r[step]) * a / d / base
+        - mb * h * (dv + u[step] * r[step]) * a / d / base,
+        0,
     )
-    Fzrr = (
+    Fzrr = max(
         Fzr
         + mb * h * (du - v[step] * r[step]) / 2 / base
-        + mb * h * (dv + u[step] * r[step]) * a / d / base
+        + mb * h * (dv + u[step] * r[step]) * a / d / base,
+        0,
     )
 
     Fxfl = pacFx(Fzfl / 1000 / 5, kappafl * 100)
@@ -198,6 +217,11 @@ for step in stepSeries:
     Fyfr = pacFy(Fzfr / 1000 / 5, alphafr * 180 / np.pi)
     Fyrl = pacFy(Fzrl / 1000 / 5, alpharl * 180 / np.pi)
     Fyrr = pacFy(Fzrr / 1000 / 5, alpharr * 180 / np.pi)
+
+    Fxfl, Fyfl = pacFxyCombine(kappafl, alphafl, Fxfl, Fyfl)
+    Fxfr, Fyfr = pacFxyCombine(kappafr, alphafr, Fxfr, Fyfr)
+    Fxrl, Fyrl = pacFxyCombine(kapparl, alpharl, Fxrl, Fyrl)
+    Fxrr, Fyrr = pacFxyCombine(kapparr, alpharr, Fxrr, Fyrr)
 
     du = (
         (Fxfl + Fxfr) * np.cos(delta[step])
@@ -228,15 +252,136 @@ for step in stepSeries:
     dqrl = (Trl[step] - Rr * Fxrl) / Ispinr
     dqrr = (Trr[step] - Rr * Fxrr) / Ispinr
 
-    u[step + 1] = u[step] + timeStep * du
-    v[step + 1] = v[step] + timeStep * dv
-    r[step + 1] = r[step] + timeStep * dr
-    qfl[step + 1] = qfl[step] + timeStep * dqfl
-    qfr[step + 1] = qfr[step] + timeStep * dqfr
-    qrl[step + 1] = qrl[step] + timeStep * dqrl
-    qrr[step + 1] = qrr[step] + timeStep * dqrr
+    u_bar = u[step] + timeStep * du
+    v_bar = v[step] + timeStep * dv
+    r_bar = r[step] + timeStep * dr
+    qfl_bar = qfl[step] + timeStep * dqfl
+    qfr_bar = qfr[step] + timeStep * dqfr
+    qrl_bar = qrl[step] + timeStep * dqrl
+    qrr_bar = qrr[step] + timeStep * dqrr
 
-plt.plot(timeSeries, u)
-plt.plot(timeSeries, v)
-plt.plot(timeSeries, r * 180 / np.pi)
+    if not modifiedEuler:
+        u[step + 1] = u_bar
+        v[step + 1] = v_bar
+        r[step + 1] = r_bar
+        qfl[step + 1] = qfl_bar
+        qfr[step + 1] = qfr_bar
+        qrl[step + 1] = qrl_bar
+        qrr[step + 1] = qrr_bar
+    else:
+        # corrector
+        ufl = (u_bar - d / 2 * r_bar) * np.cos(delta[step + 1]) + (
+            v_bar + a * r_bar
+        ) * np.sin(delta[step + 1])
+        ufr = (u_bar + d / 2 * r_bar) * np.cos(delta[step + 1]) + (
+            v_bar + a * r_bar
+        ) * np.sin(delta[step + 1])
+        url = u_bar - d / 2 * r_bar
+        urr = u_bar + d / 2 * r_bar
+
+        vfl = -(u_bar - d / 2 * r_bar) * np.sin(delta[step + 1]) + (
+            v_bar + a * r_bar
+        ) * np.cos(delta[step + 1])
+        vfr = -(u_bar + d / 2 * r_bar) * np.sin(delta[step + 1]) + (
+            v_bar + a * r_bar
+        ) * np.cos(delta[step + 1])
+        vrl = v_bar - b * r_bar
+        vrr = v_bar - b * r_bar
+
+        alphafl = alpha(ufl, vfl)
+        alphafr = alpha(ufr, vfr)
+        alpharl = alpha(url, vrl)
+        alpharr = alpha(urr, vrr)
+
+        kappafl = kappa(Rf, qfl_bar, ufl)
+        kappafr = kappa(Rf, qfr_bar, ufr)
+        kapparl = kappa(Rr, qrl_bar, url)
+        kapparr = kappa(Rr, qrr_bar, urr)
+
+        Fzfl = max(
+            Fzf
+            - mb * h * (du - v_bar * r_bar) / 2 / base
+            - mb * h * (dv + u_bar * r_bar) * b / d / base,
+            0,
+        )
+        Fzfr = max(
+            Fzf
+            - mb * h * (du - v_bar * r_bar) / 2 / base
+            + mb * h * (dv + u_bar * r_bar) * b / d / base,
+            0,
+        )
+        Fzrl = max(
+            Fzr
+            + mb * h * (du - v_bar * r_bar) / 2 / base
+            - mb * h * (dv + u_bar * r_bar) * a / d / base,
+            0,
+        )
+        Fzrr = max(
+            Fzr
+            + mb * h * (du - v_bar * r_bar) / 2 / base
+            + mb * h * (dv + u_bar * r_bar) * a / d / base,
+            0,
+        )
+
+        Fxfl = pacFx(Fzfl / 1000 / 5, kappafl * 100)
+        Fxfr = pacFx(Fzfr / 1000 / 5, kappafr * 100)
+        Fxrl = pacFx(Fzrl / 1000 / 5, kapparl * 100)
+        Fxrr = pacFx(Fzrr / 1000 / 5, kapparr * 100)
+
+        Fyfl = pacFy(Fzfl / 1000 / 5, alphafl * 180 / np.pi)
+        Fyfr = pacFy(Fzfr / 1000 / 5, alphafr * 180 / np.pi)
+        Fyrl = pacFy(Fzrl / 1000 / 5, alpharl * 180 / np.pi)
+        Fyrr = pacFy(Fzrr / 1000 / 5, alpharr * 180 / np.pi)
+
+        Fxfl, Fyfl = pacFxyCombine(kappafl, alphafl, Fxfl, Fyfl)
+        Fxfr, Fyfr = pacFxyCombine(kappafr, alphafr, Fxfr, Fyfr)
+        Fxrl, Fyrl = pacFxyCombine(kapparl, alpharl, Fxrl, Fyrl)
+        Fxrr, Fyrr = pacFxyCombine(kapparr, alpharr, Fxrr, Fyrr)
+
+        du_bar = (
+            (Fxfl + Fxfr) * np.cos(delta[step + 1])
+            - (Fyfl + Fyfr) * np.sin(delta[step + 1])
+            + Fxrl
+            + Fxrr
+        ) / M + v_bar * r_bar
+        dv_bar = (
+            (Fxfl + Fxfr) * np.sin(delta[step + 1])
+            + (Fyfl + Fyfr) * np.cos(delta[step + 1])
+            + Fyrl
+            + Fyrr
+        ) / M - u_bar * r_bar
+        dr_bar = (
+            a
+            * (
+                (Fxfl + Fxfr) * np.sin(delta[step + 1])
+                + (Fyfl + Fyfr) * np.cos(delta[step + 1])
+            )
+            - b * (Fyrl + Fyrr)
+            + d
+            / 2
+            * (
+                Fxrr
+                - Fxrl
+                + (Fxfr - Fxfl) * np.cos(delta[step + 1])
+                + (Fyfl - Fyfr) * np.sin(delta[step + 1])
+            )
+        ) / Izz
+        dqfl_bar = (Tfl[step + 1] - Rf * Fxfl) / Ispinf
+        dqfr_bar = (Tfr[step + 1] - Rf * Fxfr) / Ispinf
+        dqrl_bar = (Trl[step + 1] - Rr * Fxrl) / Ispinr
+        dqrr_bar = (Trr[step + 1] - Rr * Fxrr) / Ispinr
+
+        u[step + 1] = u[step] + timeStep / 2 * (du + du_bar)
+        v[step + 1] = v[step] + timeStep / 2 * (dv + dv_bar)
+        r[step + 1] = r[step] + timeStep / 2 * (dr + dr_bar)
+        qfl[step + 1] = qfl[step] + timeStep / 2 * (dqfl + dqfl_bar)
+        qfr[step + 1] = qfr[step] + timeStep / 2 * (dqfr + dqfr_bar)
+        qrl[step + 1] = qrl[step] + timeStep / 2 * (dqrl + dqrl_bar)
+        qrr[step + 1] = qrr[step] + timeStep / 2 * (dqrr + dqrr_bar)
+
+plt.plot(timeSeries, u, label="u")
+plt.plot(timeSeries, v, label="v")
+plt.plot(timeSeries, r * 180 / np.pi, label="r")
+plt.legend()
+plt.grid()
 plt.show()
