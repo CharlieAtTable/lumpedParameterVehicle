@@ -1,0 +1,15 @@
+Fx = f(Fz, kappa)
+   = (B1 * Fz.^2 + B2 * Fz) * 
+    sin(
+        B0 * atan(
+                    (B3 * Fz.^2 + B4 * Fz) * exp(-B5 * Fz) / B0 / (B1 * Fz.^2 + B2 * Fz) * (kappa + B9 * Fz + B10)
+                    -(B6 * Fz.^2 + B7 * Fz + B8) * (
+                                                    (B3 * Fz.^2 + B4 * Fz) * exp(-B5 * Fz) / B0 / (B1 * Fz.^2 + B2 * Fz) * (kappa + B9 * Fz + B10) - atan(
+                                                                                                                                                            (B3 * Fz.^2 + B4 * Fz) * exp(-B5 * Fz) / B0 / (B1 * Fz.^2 + B2 * Fz) * (kappa + B9 * Fz + B10)
+                                                                                                                                                         )
+                                                   )
+                 )
+       )
+
+Fy = f(Fz, alpha)
+   = (A1 * Fz.^2 + A2 * Fz) * sin(A0 * atan(A3 * sin(2 * atan(Fz / A4)) / A0 / (A1 * Fz.^2 + A2 * Fz) * (alpha + A9 * Fz + A10) - (A6 * Fz + A7) * (A3 * sin(2 * atan(Fz / A4)) / A0 / (A1 * Fz.^2 + A2 * Fz) * (alpha + A9 * Fz + A10) - atan(A3 * sin(2 * atan(Fz / A4)) / A0 / (A1 * Fz.^2 + A2 * Fz) * (alpha + A9 * Fz + A10))))) + A12 * Fz + A13

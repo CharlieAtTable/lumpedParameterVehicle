@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-modifiedEuler = False
+modifiedEuler = True
 
 g = 9.8
 mb = 4455.0 + 200 * 8
@@ -16,40 +16,68 @@ b = 3.75
 Rf = 0.51
 Rr = 0.51
 base = a + b
-h = 0.5  # in doubt
+h = 1.287  # in doubt
 
 Fzf = mw * g + mb * g * b / 2 / base
 Fzr = mw * g + mb * g * a / 2 / base
 
-B0 = 2.37272
-B1 = -9.46
-B2 = 1490
-B3 = 130
-B4 = 276
-B5 = 0.0886
-B6 = 0.00402
-B7 = -0.0615
-B8 = 1.2
-B9 = 0.0299
-B10 = -0.176
+# B0 = 2.37272
+# B1 = -9.46
+# B2 = 1490
+# B3 = 130
+# B4 = 276
+# B5 = 0.0886
+# B6 = 0.00402
+# B7 = -0.0615
+# B8 = 1.2
+# B9 = 0.0299
+# B10 = -0.176
 
-A0 = 1.65
-A1 = -34
-A2 = 1250
-A3 = 3036
-A4 = 12.8
-A5 = 0.00501
-A6 = -0.02103
-A7 = 0.77394
-A8 = 0.002289
-A9 = 0.013442
-A10 = 0.003709
-A11 = 19.1656
-A12 = 1.21356
-A13 = 6.26206
+# A0 = 1.65
+# A1 = -34
+# A2 = 1250
+# A3 = 3036
+# A4 = 12.8
+# A5 = 0.00501
+# A6 = -0.02103
+# A7 = 0.77394
+# A8 = 0.002289
+# A9 = 0.013442
+# A10 = 0.003709
+# A11 = 19.1656
+# A12 = 1.21356
+# A13 = 6.26206
 # A11 = 0.0
 # A12 = 0.0
 # A13 = 0.0
+
+B0 = 1.765
+B1 = -4.184
+B2 = 923.8
+B3 = 0
+B4 = 138.5
+B5 = 0
+B6 = 0
+B7 = -0.003864
+B8 = 0.6197
+B9 = 0
+B10 = 0
+
+
+A0 = 2.496
+A1 = -3.986
+A2 = 886.4
+A3 = 9319
+A4 = 114.4
+A5 = 0.00501
+A6 = 0
+A7 = 0.997
+A8 = 0
+A9 = 0
+A10 = 0
+A11 = 0
+A12 = 0
+A13 = 0
 
 
 def pacFx(Fz, kappa):
@@ -109,7 +137,7 @@ def alpha(u, v):
 
 
 def init(u, v, r, qfl, qfr, qrl, qrr):
-    u[0] = 0.0
+    u[0] = 9.44
     v[0] = 0.0
     r[0] = 0.0
     qfl[0] = u[0] / Rf
@@ -137,10 +165,10 @@ Tfr = 0.0 * np.ones(timeSeries.shape)
 Trl = 0.0 * np.ones(timeSeries.shape)
 Trr = 0.0 * np.ones(timeSeries.shape)
 
-# delta[int(1 / timeStep) : int(2 / timeStep)] = np.linspace(
-#     0.0, 0.2, num=int(1 / timeStep)
-# )
-# delta[int(2 / timeStep) :] = 0.2
+delta[int(2 / timeStep) : int(3 / timeStep)] = np.linspace(
+    0.0, 0.1257, num=int(1 / timeStep)
+)
+delta[int(3 / timeStep) :] = 0.1257
 
 init(u, v, r, qfl, qfr, qrl, qrr)
 
@@ -151,6 +179,8 @@ dqfl = 0.0
 dqfr = 0.0
 dqrl = 0.0
 dqrr = 0.0
+
+u_desired = u[0]
 
 for step in stepSeries:
 
@@ -208,15 +238,15 @@ for step in stepSeries:
         0,
     )
 
-    Fxfl = pacFx(Fzfl / 1000 / 5, kappafl * 100)
-    Fxfr = pacFx(Fzfr / 1000 / 5, kappafr * 100)
-    Fxrl = pacFx(Fzrl / 1000 / 5, kapparl * 100)
-    Fxrr = pacFx(Fzrr / 1000 / 5, kapparr * 100)
+    Fxfl = pacFx(Fzfl / 1000, kappafl * 100)
+    Fxfr = pacFx(Fzfr / 1000, kappafr * 100)
+    Fxrl = pacFx(Fzrl / 1000, kapparl * 100)
+    Fxrr = pacFx(Fzrr / 1000, kapparr * 100)
 
-    Fyfl = pacFy(Fzfl / 1000 / 5, alphafl * 180 / np.pi)
-    Fyfr = pacFy(Fzfr / 1000 / 5, alphafr * 180 / np.pi)
-    Fyrl = pacFy(Fzrl / 1000 / 5, alpharl * 180 / np.pi)
-    Fyrr = pacFy(Fzrr / 1000 / 5, alpharr * 180 / np.pi)
+    Fyfl = pacFy(Fzfl / 1000, alphafl * 180 / np.pi)
+    Fyfr = pacFy(Fzfr / 1000, alphafr * 180 / np.pi)
+    Fyrl = pacFy(Fzrl / 1000, alpharl * 180 / np.pi)
+    Fyrr = pacFy(Fzrr / 1000, alpharr * 180 / np.pi)
 
     Fxfl, Fyfl = pacFxyCombine(kappafl, alphafl, Fxfl, Fyfl)
     Fxfr, Fyfr = pacFxyCombine(kappafr, alphafr, Fxfr, Fyfr)
@@ -247,6 +277,12 @@ for step in stepSeries:
             + (Fyfl - Fyfr) * np.sin(delta[step])
         )
     ) / Izz
+
+    Tfl[step] = 500 * (u_desired - u[step])
+    Tfr[step] = 500 * (u_desired - u[step])
+    Trl[step] = 500 * (u_desired - u[step])
+    Trr[step] = 500 * (u_desired - u[step])
+
     dqfl = (Tfl[step] - Rf * Fxfl) / Ispinf
     dqfr = (Tfr[step] - Rf * Fxfr) / Ispinf
     dqrl = (Trl[step] - Rr * Fxrl) / Ispinr
@@ -323,15 +359,15 @@ for step in stepSeries:
             0,
         )
 
-        Fxfl = pacFx(Fzfl / 1000 / 5, kappafl * 100)
-        Fxfr = pacFx(Fzfr / 1000 / 5, kappafr * 100)
-        Fxrl = pacFx(Fzrl / 1000 / 5, kapparl * 100)
-        Fxrr = pacFx(Fzrr / 1000 / 5, kapparr * 100)
+        Fxfl = pacFx(Fzfl / 1000, kappafl * 100)
+        Fxfr = pacFx(Fzfr / 1000, kappafr * 100)
+        Fxrl = pacFx(Fzrl / 1000, kapparl * 100)
+        Fxrr = pacFx(Fzrr / 1000, kapparr * 100)
 
-        Fyfl = pacFy(Fzfl / 1000 / 5, alphafl * 180 / np.pi)
-        Fyfr = pacFy(Fzfr / 1000 / 5, alphafr * 180 / np.pi)
-        Fyrl = pacFy(Fzrl / 1000 / 5, alpharl * 180 / np.pi)
-        Fyrr = pacFy(Fzrr / 1000 / 5, alpharr * 180 / np.pi)
+        Fyfl = pacFy(Fzfl / 1000, alphafl * 180 / np.pi)
+        Fyfr = pacFy(Fzfr / 1000, alphafr * 180 / np.pi)
+        Fyrl = pacFy(Fzrl / 1000, alpharl * 180 / np.pi)
+        Fyrr = pacFy(Fzrr / 1000, alpharr * 180 / np.pi)
 
         Fxfl, Fyfl = pacFxyCombine(kappafl, alphafl, Fxfl, Fyfl)
         Fxfr, Fyfr = pacFxyCombine(kappafr, alphafr, Fxfr, Fyfr)
@@ -366,6 +402,12 @@ for step in stepSeries:
                 + (Fyfl - Fyfr) * np.sin(delta[step + 1])
             )
         ) / Izz
+
+        Tfl[step + 1] = 500 * (u_desired - u_bar)
+        Tfr[step + 1] = 500 * (u_desired - u_bar)
+        Trl[step + 1] = 500 * (u_desired - u_bar)
+        Trr[step + 1] = 500 * (u_desired - u_bar)
+
         dqfl_bar = (Tfl[step + 1] - Rf * Fxfl) / Ispinf
         dqfr_bar = (Tfr[step + 1] - Rf * Fxfr) / Ispinf
         dqrl_bar = (Trl[step + 1] - Rr * Fxrl) / Ispinr
@@ -382,6 +424,18 @@ for step in stepSeries:
 plt.plot(timeSeries, u, label="u")
 plt.plot(timeSeries, v, label="v")
 plt.plot(timeSeries, r * 180 / np.pi, label="r")
+
+# plt.plot(np.linspace(-100, 100, num=100), pacFx(7.3575, np.linspace(-100, 100, num=100)))
+# plt.plot(np.linspace(-100, 100, num=100), pacFx(14.715, np.linspace(-100, 100, num=100)))
+# plt.plot(np.linspace(-100, 100, num=100), pacFx(29.43, np.linspace(-100, 100, num=100)))
+# plt.plot(np.linspace(-100, 100, num=100), pacFx(44.145, np.linspace(-100, 100, num=100)))
+# plt.plot(np.linspace(-100, 100, num=100), pacFx(58.86, np.linspace(-100, 100, num=100)))
+# plt.plot(np.linspace(-90, 90, num=100), pacFy(7.3575, np.linspace(-90, 90, num=100)))
+# plt.plot(np.linspace(-90, 90, num=100), pacFy(14.715, np.linspace(-90, 90, num=100)))
+# plt.plot(np.linspace(-90, 90, num=100), pacFy(29.43, np.linspace(-90, 90, num=100)))
+# plt.plot(np.linspace(-90, 90, num=100), pacFy(44.145, np.linspace(-90, 90, num=100)))
+# plt.plot(np.linspace(-90, 90, num=100), pacFy(58.86, np.linspace(-90, 90, num=100)))
+
 plt.legend()
 plt.grid()
 plt.show()
