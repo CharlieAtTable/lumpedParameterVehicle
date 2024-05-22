@@ -64,12 +64,6 @@ A4 = 114.4
 A5 = 0.00501
 A6 = 0
 A7 = 0.997
-# A8 = 0.002289
-# A9 = -0.0005892
-# A10 = -0.1766
-# A11 = 19.1656
-# A12 = 25.87
-# A13 = 104.6
 A8 = 0
 A9 = 0
 A10 = 0
@@ -142,14 +136,14 @@ def init(u, v, r, q):
 
 
 endTime = 10.0
-timeStep = 0.002
+timeStep = 0.001
 timeSeries = np.arange(0, timeStep + endTime, timeStep, dtype=float)
 stepSeries = np.arange(0, timeSeries.size - 1, dtype=int)
 
 u = np.zeros(timeSeries.shape)
 v = np.zeros(timeSeries.shape)
 r = np.zeros(timeSeries.shape)
-q = np.zeros((4, timeSeries.size))
+q = np.zeros((wheelNum, timeSeries.size))
 
 delta = 0.0 * np.ones(timeSeries.shape)
 T = 0.0 * np.ones(q.shape)
@@ -160,10 +154,27 @@ delta[int(3 / timeStep) :] = 0.1257
 
 init(u, v, r, q)
 
-du = 0.0
-dv = 0.0
-dr = 0.0
-dq = np.array([0.0, 0.0, 0.0, 0.0])
+du = np.zeros(timeSeries.shape)
+dv = np.zeros(timeSeries.shape)
+dr = np.zeros(timeSeries.shape)
+dq = np.zeros((wheelNum, timeSeries.size))
+
+u_p = np.zeros(timeSeries.shape)
+v_p = np.zeros(timeSeries.shape)
+r_p = np.zeros(timeSeries.shape)
+q_p = np.zeros((wheelNum, timeSeries.size))
+u_pm = np.zeros(timeSeries.shape)
+v_pm = np.zeros(timeSeries.shape)
+r_pm = np.zeros(timeSeries.shape)
+q_pm = np.zeros((wheelNum, timeSeries.size))
+du_pm = np.zeros(timeSeries.shape)
+dv_pm = np.zeros(timeSeries.shape)
+dr_pm = np.zeros(timeSeries.shape)
+dq_pm = np.zeros((wheelNum, timeSeries.size))
+u_c = np.zeros(timeSeries.shape)
+v_c = np.zeros(timeSeries.shape)
+r_c = np.zeros(timeSeries.shape)
+q_c = np.zeros((wheelNum, timeSeries.size))
 
 u_desired = u[0]
 
@@ -249,60 +260,103 @@ def advance(delta, u_desired, u, v, r, q, du, dv):
     ) / Izz
 
     # control
-    T = 1000 * (u_desired - u)
+    T = [0, 0, 1000 * (u_desired - u), 1000 * (u_desired - u)]
 
     dq = (T - R * Fx) / Ispin
     return du, dv, dr, dq
 
 
-for step in stepSeries:
-    # Euler
-    # du, dv, dr, dq = advance(
-    #     delta[step], 0.5 * u_desired, u[step], v[step], r[step], q[:, step], du, dv
-    # )
-    # u[step + 1] = u[step] + timeStep * du
-    # v[step + 1] = v[step] + timeStep * dv
-    # r[step + 1] = r[step] + timeStep * dr
-    # q[:, step + 1] = q[:, step] + timeStep * dq
+# init
+for step in range(4):
+    du[step], dv[step], dr[step], dq[:, step] = advance(
+        delta[step],
+        0.5 * u_desired,
+        u[step],
+        v[step],
+        r[step],
+        q[:, step],
+        du[step],
+        dv[step],
+    )
+    u[step + 1] = u[step] + timeStep * du[step]
+    v[step + 1] = v[step] + timeStep * dv[step]
+    r[step + 1] = r[step] + timeStep * dr[step]
+    q[:, step + 1] = q[:, step] + timeStep * dq[:, step]
 
-    # Runge-Kutta
-    K1 = advance(
-        delta[step], 0.5 * u_desired, u[step], v[step], r[step], q[:, step], du, dv
+    du[step + 1] = du[step]
+    dv[step + 1] = dv[step]
+
+
+for step in stepSeries[0:-3]:
+    # PMECME
+    # P
+    u_p[step + 4] = u[step] + 4 / 3 * timeStep * (
+        2 * du[step + 3] - du[step + 2] + 2 * du[step + 1]
     )
-    K2 = advance(
-        (delta[step] + delta[step + 1]) / 2,
+    v_p[step + 4] = v[step] + 4 / 3 * timeStep * (
+        2 * dv[step + 3] - dv[step + 2] + 2 * dv[step + 1]
+    )
+    r_p[step + 4] = r[step] + 4 / 3 * timeStep * (
+        2 * dr[step + 3] - dr[step + 2] + 2 * dr[step + 1]
+    )
+    q_p[:, step + 4] = q[:, step] + 4 / 3 * timeStep * (
+        2 * dq[:, step + 3] - dq[:, step + 2] + 2 * dq[:, step + 1]
+    )
+    # M
+    u_pm[step + 4] = u_p[step + 4] + 112 / 121 * (u_c[step + 3] - u_p[step + 3])
+    v_pm[step + 4] = v_p[step + 4] + 112 / 121 * (v_c[step + 3] - v_p[step + 3])
+    r_pm[step + 4] = r_p[step + 4] + 112 / 121 * (r_c[step + 3] - r_p[step + 3])
+    q_pm[:, step + 4] = q_p[:, step + 4] + 112 / 121 * (
+        q_c[:, step + 3] - q_p[:, step + 3]
+    )
+    # E
+    temp = advance(
+        delta[step + 4],
         0.5 * u_desired,
-        u[step] + timeStep / 2 * K1[0],
-        v[step] + timeStep / 2 * K1[1],
-        r[step] + timeStep / 2 * K1[2],
-        q[:, step] + timeStep / 2 * K1[3],
-        (du + K1[0]) / 2,
-        (dv + K1[1]) / 2,
+        u_pm[step + 4],
+        v_pm[step + 4],
+        r_pm[step + 4],
+        q_pm[:, step + 4],
+        du[step + 3],
+        dv[step + 3],
     )
-    K3 = advance(
-        (delta[step] + delta[step + 1]) / 2,
+    du_pm[step + 4] = temp[0]
+    dv_pm[step + 4] = temp[1]
+    dr_pm[step + 4] = temp[2]
+    dq_pm[:, step + 4] = temp[3]
+    # C
+    u_c[step + 4] = (9 * u[step + 3] - u[step + 1]) / 8 + 3 / 8 * timeStep * (
+        du_pm[step + 4] + 2 * du[step + 3] - du[step + 2]
+    )
+    v_c[step + 4] = (9 * v[step + 3] - v[step + 1]) / 8 + 3 / 8 * timeStep * (
+        dv_pm[step + 4] + 2 * dv[step + 3] - dv[step + 2]
+    )
+    r_c[step + 4] = (9 * r[step + 3] - r[step + 1]) / 8 + 3 / 8 * timeStep * (
+        dr_pm[step + 4] + 2 * dr[step + 3] - dr[step + 2]
+    )
+    q_c[:, step + 4] = (9 * q[:, step + 3] - q[:, step + 1]) / 8 + 3 / 8 * timeStep * (
+        dq_pm[:, step + 4] + 2 * dq[:, step + 3] - dq[:, step + 2]
+    )
+    # M
+    u[step + 4] = u_c[step + 4] - 9 / 121 * (u_c[step + 4] - u_p[step + 4])
+    v[step + 4] = v_c[step + 4] - 9 / 121 * (v_c[step + 4] - v_p[step + 4])
+    r[step + 4] = r_c[step + 4] - 9 / 121 * (r_c[step + 4] - r_p[step + 4])
+    q[:, step + 4] = q_c[:, step + 4] - 9 / 121 * (q_c[:, step + 4] - q_p[:, step + 4])
+    # E
+    temp = advance(
+        delta[step + 4],
         0.5 * u_desired,
-        u[step] + timeStep / 2 * K2[0],
-        v[step] + timeStep / 2 * K2[1],
-        r[step] + timeStep / 2 * K2[2],
-        q[:, step] + timeStep / 2 * K2[3],
-        (du + K2[0]) / 2,
-        (dv + K2[1]) / 2,
+        u[step + 4],
+        v[step + 4],
+        r[step + 4],
+        q[:, step + 4],
+        du_pm[step + 4],
+        dv_pm[step + 4],
     )
-    K4 = advance(
-        delta[step + 1],
-        0.5 * u_desired,
-        u[step] + timeStep * K3[0],
-        v[step] + timeStep * K3[1],
-        r[step] + timeStep * K3[2],
-        q[:, step] + timeStep * K3[3],
-        K3[0],
-        K3[1],
-    )
-    u[step + 1] = u[step] + timeStep / 6 * (K1[0] + 4 * K2[0] + K3[0])
-    v[step + 1] = v[step] + timeStep / 6 * (K1[1] + 4 * K2[1] + K3[1])
-    r[step + 1] = r[step] + timeStep / 6 * (K1[2] + 4 * K2[2] + K3[2])
-    q[:, step + 1] = q[:, step] + timeStep / 6 * (K1[3] + 4 * K2[3] + K3[3])
+    du[step + 4] = temp[0]
+    dv[step + 4] = temp[1]
+    dr[step + 4] = temp[2]
+    dq[:, step + 4] = temp[3]
 
 
 plt.plot(timeSeries, u, label="u")

@@ -147,7 +147,7 @@ def init(u, v, r, qfl, qfr, qrl, qrr):
 
 
 endTime = 10.0
-timeStep = 0.01
+timeStep = 0.002
 timeSeries = np.arange(0, timeStep + endTime, timeStep, dtype=float)
 stepSeries = np.arange(0, timeSeries.size - 1, dtype=int)
 
@@ -180,7 +180,7 @@ dqfr = 0.0
 dqrl = 0.0
 dqrr = 0.0
 
-u_desired = u[0]
+u_desired = 0.5 * u[0]
 
 for step in stepSeries:
 
